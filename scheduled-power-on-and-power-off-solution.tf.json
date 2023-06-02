@@ -83,7 +83,7 @@
                 "agency": "${huaweicloud_identity_agency.identity_agency.name}",
                 "app": "default",
                 "code_type": "obs",
-                "code_url": "https://documentation-samples.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-publicbucket/solution-as-code-moudle/scheduled-power-on-and-power-off-solution/functiongraph/batch-start-ecs-at-scheduled-time.zip",
+                "code_url": "https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/scheduled-power-on-and-power-off-solution/functiongraph/batch-start-ecs-at-scheduled-time.zip",
                 "depend_list": [
                     "${data.huaweicloud_fgs_dependencies.fgs_dependencies_ecs.packages[0].id}"
                 ],
@@ -99,7 +99,7 @@
                 "agency": "${huaweicloud_identity_agency.identity_agency.name}",
                 "app": "default",
                 "code_type": "obs",
-                "code_url": "https://documentation-samples.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-publicbucket/solution-as-code-moudle/scheduled-power-on-and-power-off-solution/functiongraph/batch-stop-ecs-at-scheduled-time.zip",
+                "code_url": "https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/scheduled-power-on-and-power-off-solution/functiongraph/batch-stop-ecs-at-scheduled-time.zip",
                 "depend_list": [
                     "${data.huaweicloud_fgs_dependencies.fgs_dependencies_ecs.packages[0].id}"
                 ],

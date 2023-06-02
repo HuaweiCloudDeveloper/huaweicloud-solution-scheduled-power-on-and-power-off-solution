@@ -7,26 +7,26 @@ from huaweicloudsdkecs.v2 import *
 
 import traceback
 
-# FunctionGraph entry point
+
 def handler(event, context):
     log = context.getLogger()
     result = check_configuration(context)
     if result is not None:
         return result
-    
+
     processor = Processor(context)
-   
+
     try:
         response = processor.start_servers()
         return f"'{response}'"
     except:
         log.error("failed to process, "
-                  f"exception:{traceback.format_exc()}")
-                  
-# Verify that environment variables have been configured.
+                  f"exception：{traceback.format_exc()}")
+
+
 def check_configuration(context):
-    ak = context.getAccessKey().strip()
-    sk = context.getSecretKey().strip()
+    ak = context.getSecurityAccessKey()
+    sk = context.getSecuritySecretKey()
     if not ak or not sk:
         ak = context.getUserData('ak', '').strip()
         sk = context.getUserData('sk', '').strip()
@@ -35,7 +35,7 @@ def check_configuration(context):
 
 
 class Processor:
-    def __init__(self,context=None):
+    def __init__(self, context=None):
         self.log = context.getLogger()
         self.os_client = os_client(context)
         self.region = context.getUserData('region').strip()
@@ -47,10 +47,10 @@ class Processor:
         for os_id in self.ids:
             listServersOsstart.append(
                 ServerId(
-                    id = os_id
+                    id=os_id
                 )
             )
-        
+
         return listServersOsstart
 
     def start_servers(self):
@@ -58,10 +58,10 @@ class Processor:
             request = BatchStartServersRequest()
 
             osstartbody = BatchStartServersOption(
-                servers = self.build_servers_options()
+                servers=self.build_servers_options()
             )
             request.body = BatchStartServersRequestBody(
-                os_start = osstartbody
+                os_start=osstartbody
             )
 
             return self.os_client.batch_start_servers(request)
@@ -71,16 +71,18 @@ class Processor:
             print(e.error_code)
             print(e.error_msg)
             self.log.error(f"failed to request batch start servers"
-                           f"status_code:{e.status_code}, "
+                           f"status_code：{e.status_code}, "
                            f"request_id:{e.request_id}, "
                            f"error_code:{e.error_code}. "
                            f"error_msg:{e.error_msg}")
 
 
 def os_client(context):
-    ak = context.getAccessKey()
-    sk = context.getSecretKey()
-    credentials = BasicCredentials(ak, sk)
+    ak = context.getSecurityAccessKey()
+    sk = context.getSecuritySecretKey()
+    st = context.getSecurityToken()
+    project_id = context.getProjectID()
+    credentials = BasicCredentials(ak, sk, project_id).with_security_token(st)
 
     return EcsClient.new_builder() \
         .with_credentials(credentials) \
