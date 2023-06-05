@@ -1,0 +1,142 @@
+{
+    "terraform": {
+        "required_providers": [
+            {
+                "huaweicloud": {
+                    "source": "huawei.com/provider/huaweicloud",
+                    "version": ">=1.37.1"
+                }
+            }
+        ]
+    },
+    "provider": {
+        "huaweicloud": {
+            "cloud": "myhuaweicloud.com",
+            "endpoints": {
+                "iam": "iam.ap-southeast-3.myhuaweicloud.com",
+                "dns": "dns.ap-southeast-3.myhuaweicloud.com"
+            },
+            "insecure": true,
+            "region": "ap-southeast-3",
+            "auth_url": "https://iam.ap-southeast-3.myhuaweicloud.com/v3"
+        }
+    },
+    "variable": {
+        "function_name": {
+            "default": "scheduled_power_on_and_power_off_demo",
+            "description": "Function name, which identifies a function and serves as the prefix of other resource names. It must be unique and can contain 2 to 48 characters, including letters, digits, underscores (_), and hyphens (-). Start with a letter. Default: scheduled_power_on_and_power_off_demo ",
+            "type": "string",
+            "nullable": "false",
+            "validation": {
+                "condition": "${length(regexall(\"^[a-zA-Z][a-zA-Z0-9_-]{0,47}$\",var.function_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ids": {
+            "default": "",
+            "description": "IDs of the ECSs to periodically start or stop. Obtain them by referring to the parameter description in the deployment guide. Separate the IDs with spaces. For example, id1 id2 .... ",
+            "type": "string",
+            "nullable": "false",
+            "validation": {
+                "condition": "${length(regexall(\"^([a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}\\\\s)+[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}$\",var.ids))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "start_cron": {
+            "default": "",
+            "description": "Cron expression for periodical startup. Format: second minute hour day month week (optional). For example, 0 15 2 * * ? (executed at 02:15:00 every day), 0 30 8 ? * Mon (executed at 08:30:00 every Monday), 0 0 7 1 * ? (executed at 07:00:00 on the first day of every month). For details about how to set a cron expression, see the deployment guide. ",
+            "type": "string",
+            "nullable": "false"
+        },
+        "stop_cron": {
+            "default": "",
+            "description": "Cron expression for periodical shutdown. Format: second minute hour day month week (optional). For example, 0 15 2 * * ? (executed at 02:15:00 every day), 0 30 8 ? * Mon (executed at 08:30:00 every Monday), 0 0 7 1 * ? (executed at 07:00:00 on the first day of every month). For details about how to set a cron expression, see the deployment guide. ",
+            "type": "string",
+            "nullable": "false"
+        }
+    },
+    "data": {
+        "huaweicloud_fgs_dependencies": {
+            "fgs_dependencies_ecs": {
+                "type": "public",
+                "name": "huaweicloudsdk_ecs_core_py3.6"
+            }
+        }
+    },
+    "resource": {
+        "huaweicloud_identity_agency": {
+            "identity_agency": {
+                "name": "${var.function_name}_agency",
+                "description": "iam ECS FullAccess CommonOperations",
+                "delegated_service_name": "op_svc_cff",
+                "project_role": {
+                    "project": "ap-southeast-3",
+                    "roles": [
+                        "ECS FullAccess",
+                        "iam"
+                    ]
+                }
+            }
+        },
+        "huaweicloud_fgs_function": {
+            "start_fgs_function": {
+                "agency": "${huaweicloud_identity_agency.identity_agency.name}",
+                "app": "default",
+                "code_type": "obs",
+                "code_url": "https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/scheduled-power-on-and-power-off-solution/functiongraph/batch-start-ecs-at-scheduled-time.zip",
+                "depend_list": [
+                    "${data.huaweicloud_fgs_dependencies.fgs_dependencies_ecs.packages[0].id}"
+                ],
+                "functiongraph_version": "v2",
+                "handler": "batch-start-ecs-at-scheduled-time.handler",
+                "memory_size": 128,
+                "name": "${var.function_name}_start_fgs",
+                "runtime": "Python3.6",
+                "timeout": 120,
+                "user_data": "${jsonencode({\r\n region = \"ap-southeast-3\",\r\n ids = \"${var.ids}\"})}"
+            },
+            "stop_fgs_function": {
+                "agency": "${huaweicloud_identity_agency.identity_agency.name}",
+                "app": "default",
+                "code_type": "obs",
+                "code_url": "https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/scheduled-power-on-and-power-off-solution/functiongraph/batch-stop-ecs-at-scheduled-time.zip",
+                "depend_list": [
+                    "${data.huaweicloud_fgs_dependencies.fgs_dependencies_ecs.packages[0].id}"
+                ],
+                "functiongraph_version": "v2",
+                "handler": "batch-stop-ecs-at-scheduled-time.handler",
+                "memory_size": 128,
+                "name": "${var.function_name}_stop_fgs",
+                "runtime": "Python3.6",
+                "timeout": 120,
+                "user_data": "${jsonencode({\r\n region = \"ap-southeast-3\",\r\n ids = \"${var.ids}\"})}"
+            }
+        },
+        "huaweicloud_fgs_trigger": {
+            "start_fgs_trigger": {
+                "function_urn": "${huaweicloud_fgs_function.start_fgs_function.urn}",
+                "type": "TIMER",
+                "status": "ACTIVE",
+                "timer": [
+                    {
+                        "name": "${var.function_name}_start_timer",
+                        "schedule_type": "Cron",
+                        "schedule": "${var.start_cron}"
+                    }
+                ]
+            },
+            "stop_fgs_trigger": {
+                "function_urn": "${huaweicloud_fgs_function.stop_fgs_function.urn}",
+                "type": "TIMER",
+                "status": "ACTIVE",
+                "timer": [
+                    {
+                        "name": "${var.function_name}_stop_timer",
+                        "schedule_type": "Cron",
+                        "schedule": "${var.stop_cron}"
+                    }
+                ]
+            }
+        }
+    }
+}
